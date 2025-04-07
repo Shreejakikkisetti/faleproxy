@@ -29,23 +29,8 @@ app.post('/fetch', async (req, res) => {
     const response = await axios.get(url);
     const html = response.data;
 
-    // Use cheerio to parse HTML and selectively replace text content, not URLs
+    // Use cheerio to parse HTML
     const $ = cheerio.load(html);
-    
-    // Function to replace text but skip URLs and attributes
-    function replaceYaleWithFale(i, el) {
-      if ($(el).children().length === 0 || $(el).text().trim() !== '') {
-        // Get the HTML content of the element
-        let content = $(el).html();
-        
-        // Only process if it's a text node
-        if (content && $(el).children().length === 0) {
-          // Replace Yale with Fale in text content only
-          content = content.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale').replace(/YALE/g, 'FALE');
-          $(el).html(content);
-        }
-      }
-    }
     
     // Process text nodes in the body
     $('body *').contents().filter(function() {
@@ -53,14 +38,14 @@ app.post('/fetch', async (req, res) => {
     }).each(function() {
       // Replace text content but not in URLs or attributes
       const text = $(this).text();
-      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale').replace(/YALE/g, 'FALE');
+      const newText = text.replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
       if (text !== newText) {
         $(this).replaceWith(newText);
       }
     });
     
     // Process title separately
-    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale').replace(/YALE/g, 'FALE');
+    const title = $('title').text().replace(/Yale/g, 'Fale').replace(/yale/g, 'fale');
     $('title').text(title);
     
     return res.json({ 
@@ -70,14 +55,19 @@ app.post('/fetch', async (req, res) => {
       originalUrl: url
     });
   } catch (error) {
-    console.error('Error fetching URL:', error.message);
+    console.error('Error:', error);
     return res.status(500).json({ 
-      error: `Failed to fetch content: ${error.message}` 
+      error: 'Failed to fetch and process content',
+      details: error.message
     });
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Faleproxy server running at http://localhost:${PORT}`);
-});
+// Start server if not being required as a module
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
